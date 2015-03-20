@@ -7,6 +7,9 @@
 #define EDOT(Z) ((twopif) / (1.0 - (e) * cos(Z)))
 #endif
 
+#ifndef DEGTORAD
+#define DEGTORAD      0.017453292519943295769236907684886127134428718885417
+#endif
 
 double *dorbint(double Eo, long numpts, double dt, orbitparams * orb)
 /* This routine integrates Kepler's Equation and returns a double      */
@@ -117,10 +120,10 @@ void E_to_phib_BT(double *E, long numpoints, orbitparams * orb)
 /* using Blanford and Teukolsky Equations         */
 {
    long i;
-   double c1, c2, cE, sE;
+   double c1, c2, cE, sE, wrad=orb->w*DEGTORAD;
 
-   c1 = orb->x * sin(orb->w);
-   c2 = orb->x * cos(orb->w) * sqrt(1 - orb->e * orb->e);
+   c1 = orb->x * sin(wrad);
+   c2 = orb->x * cos(wrad) * sqrt(1 - orb->e * orb->e);
    for (i = 0; i < numpoints; i++) {
       cE = cos(E[i]);
       sE = sin(E[i]);
@@ -134,11 +137,11 @@ void E_to_v(double *E, long numpoints, orbitparams * orb)
 /* Convert eccentric anomalys (*E) to pulsar velocities (km/s) */
 {
    long i;
-   double c1, c2, c3, tmp = 0.0;
+   double c1, c2, c3, tmp = 0.0, wrad=orb->w*DEGTORAD;
 
    c1 = TWOPI * orb->x / orb->p;
-   c2 = cos(orb->w) * sqrt(1 - orb->e * orb->e);
-   c3 = sin(orb->w);
+   c2 = cos(wrad) * sqrt(1 - orb->e * orb->e);
+   c3 = sin(wrad);
    for (i = 0; i < numpoints; i++) {
       tmp = cos(E[i]);
       E[i] = SOL / 1000.0 * c1 * (c2 * tmp - c3 * sin(E[i]))
@@ -151,11 +154,11 @@ void E_to_p(double *E, long numpoints, double p_psr, orbitparams * orb)
 /* Convert eccentric anomalys (*E) to new pulsar periods */
 {
    long i;
-   double c1, c2, c3, tmp = 0.0;
+   double c1, c2, c3, tmp = 0.0, wrad=orb->w*DEGTORAD;
 
    c1 = TWOPI * orb->x / orb->p;
-   c2 = cos(orb->w) * sqrt(1 - orb->e * orb->e);
-   c3 = sin(orb->w);
+   c2 = cos(wrad) * sqrt(1 - orb->e * orb->e);
+   c3 = sin(wrad);
    for (i = 0; i < numpoints; i++) {
       tmp = cos(E[i]);
       E[i] = p_psr * (1 + c1 * (c2 * tmp - c3 * sin(E[i]))
@@ -169,10 +172,10 @@ void E_to_phib(double *E, long numpoints, orbitparams * orb)
 /* This is the pulsar orbit Roemer delay.         */
 {
    long i;
-   double c1, c2;
+   double c1, c2, wrad=orb->w*DEGTORAD;
 
-   c1 = orb->x * sin(orb->w);
-   c2 = orb->x * cos(orb->w) * sqrt(1 - orb->e * orb->e);
+   c1 = orb->x * sin(wrad);
+   c2 = orb->x * cos(wrad) * sqrt(1 - orb->e * orb->e);
    for (i = 0; i < numpoints; i++)
       E[i] = c1 * (cos(E[i]) - orb->e) + c2 * sin(E[i]);
 }
@@ -182,11 +185,11 @@ void E_to_z(double *E, long numpoints, double p_psr, double T, orbitparams * orb
 /* Convert eccentric anomalys (*E) to Fourier f-dots */
 {
    long i;
-   double c1, c2, c3, tmp = 0.0;
+   double c1, c2, c3, tmp = 0.0, wrad=orb->w*DEGTORAD;
 
    c1 = -TWOPI * TWOPI * T * T * orb->x / (orb->p * orb->p * p_psr);
-   c2 = cos(orb->w) * sqrt(1 - orb->e * orb->e);
-   c3 = sin(orb->w);
+   c2 = cos(wrad) * sqrt(1 - orb->e * orb->e);
+   c3 = sin(wrad);
    for (i = 0; i < numpoints; i++) {
       tmp = cos(E[i]);
       E[i] = c1 * (c2 * sin(E[i]) + c3 * (tmp - orb->e))

@@ -93,7 +93,6 @@ void binary_velocity(double T, orbitparams * orbit, double *minv, double *maxv)
   /*  Return the minimum and maximum orbital velocities of a pulsar    */
   /*  during an observation as a fraction of the speed of light.       */
   /*  Arguments:                                                       */
-  /*    'ppsr' is the period of the pusar in seconds.                  */
   /*    'T' is the length of the observation in seconds.               */
   /*    'orbit' is a ptr to a orbitparams structure containing the     */
   /*       Keplerian orbital parameters of the binary system.          */
@@ -119,7 +118,7 @@ void binary_velocity(double T, orbitparams * orbit, double *minv, double *maxv)
       orb.p = orbit->p;
       orb.x = orbit->x;
       orb.e = orbit->e;
-      orb.w = orbit->w * DEGTORAD;
+      orb.w = orbit->w;
       orb.t = orbit->t;
       startE = keplers_eqn(orb.t, orb.p, orb.e, 1.0E-15);
       E = dorbint(startE, numpoints, dtb, &orb);
@@ -520,7 +519,7 @@ fcomplex *gen_bin_response(double roffset, int numbetween, double ppsr,
    f = TWOPI * datar;
    orb.x = orbit->x / (ppsr * datar);
    orb.e = orbit->e;
-   orb.w = orbit->w * DEGTORAD;
+   orb.w = orbit->w;
    orb.t = orbit->t / T;
 
    /* Generate the orbit */
