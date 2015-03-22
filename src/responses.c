@@ -82,26 +82,23 @@ int w_resp_halfwidth(double z, double w, presto_interp_acc accuracy)
 {
     // This routine assumes that the average freq is at template r=0
     // r(u) = r0 + z0 * u + 0.5 * w * u * u
-    double r0 = -0.5 * z + w / 12.0;  // Start fourier freq relative to r_avg = 0
-    double z0 = z - 0.5 * w; // Starting fourier fdot
-    double r1 = r0 + z0 + 0.5 * w; // Ending fourier freq relative to r_avg = 0
-    double umax = -z0 / w; // "time" where fourier freq is max or min
-    double rmax = 0.0, maxdev;
+    float r0 = -0.5 * z + w / 12.0;  // Start fourier freq relative to r_avg = 0
+    float z0 = z - 0.5 * w; // Starting fourier fdot
+    float r1 = r0 + z0 + 0.5 * w; // Ending fourier freq relative to r_avg = 0
+    float umax = -z0 / w; // "time" where fourier freq is max or min
+    float maxdev = fabs(r0); // Maximum deviation from r_avg = 0 freq
 
     // Only care about rmax if it occurs during the observation (0 < u < 1)
-    if (umax > 0.0 && umax < 1.0)
-        rmax = fabs(r0 + z0 * umax + 0.5 * w * umax * umax); // r(umax)
+    if (umax > 0.0 && umax < 1.0) {
+        // fabs(r(umax))
+        float rmax = fabs(r0 + z0 * umax + 0.5 * w * umax * umax);
+        maxdev = (rmax > maxdev) ? rmax : maxdev;
+    }
 
     // Find the max deviation of the fourier behavior from the average r
-    maxdev = (rmax > fabs(r0)) ? rmax : fabs(r0);
     maxdev = (maxdev > fabs(r1)) ? maxdev : fabs(r1);
 
-    if (accuracy == HIGHACC) {
-        //     ((   16       * 3) + (     20      >> 1) +    5  = 63
-        return (int) rmax + ((NUMFINTBINS * 3) + (NUMLOCPOWAVG >> 1) + DELTAAVGBINS);
-    } else {
-        return (int) rmax + NUMFINTBINS;
-    }
+    return (int)(maxdev + 0.5) + r_resp_halfwidth(accuracy);
 }
 
 
