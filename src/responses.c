@@ -7,7 +7,6 @@
 /* Function declarations */
 int fresnl(double xxa, double *ssa, double *cca);
 
-
 int r_resp_halfwidth(presto_interp_acc accuracy)
   /*  Return the approximate kernel half width in FFT bins required    */
   /*  to achieve a fairly high accuracy correlation based correction   */
@@ -19,9 +18,10 @@ int r_resp_halfwidth(presto_interp_acc accuracy)
   /*    length of the array required to hold such a kernel.            */
 {
    if (accuracy == HIGHACC) {
-      return ((NUMFINTBINS * 3) + (NUMLOCPOWAVG >> 1) + DELTAAVGBINS);
+       //     ((   16       * 3) + (     20      >> 1) +    5  = 63
+       return ((NUMFINTBINS * 3) + (NUMLOCPOWAVG >> 1) + DELTAAVGBINS);
    } else {
-      return NUMFINTBINS;
+       return NUMFINTBINS;
    }
 }
 
@@ -80,12 +80,28 @@ int w_resp_halfwidth(double z, double w, presto_interp_acc accuracy)
   /*    The result must be multiplied by 2*'numbetween' to get the     */
   /*    length of the array required to hold such a kernel.            */
 {
-   /* This needs to be made more robust... */
+    // This routine assumes that the average freq is at template r=0
+    // r(u) = r0 + z0 * u + 0.5 * w * u * u
+    double r0 = -0.5 * z + w / 12.0;  // Start fourier freq relative to r_avg = 0
+    double z0 = z - 0.5 * w; // Starting fourier fdot
+    double r1 = r0 + z0 + 0.5 * w; // Ending fourier freq relative to r_avg = 0
+    double umax = -z0 / w; // "time" where fourier freq is max or min
+    double rmax = 0.0, maxdev;
 
-   if (fabs(w) < 1.0e-7)
-      return z_resp_halfwidth(z, accuracy);
-   else
-      return (int) fabs(z) + r_resp_halfwidth(accuracy);
+    // Only care about rmax if it occurs during the observation (0 < u < 1)
+    if (umax > 0.0 && umax < 1.0)
+        rmax = fabs(r0 + z0 * umax + 0.5 * w * umax * umax); // r(umax)
+
+    // Find the max deviation of the fourier behavior from the average r
+    maxdev = (rmax > fabs(r0)) ? rmax : fabs(r0);
+    maxdev = (maxdev > fabs(r1)) ? maxdev : fabs(r1);
+
+    if (accuracy == HIGHACC) {
+        //     ((   16       * 3) + (     20      >> 1) +    5  = 63
+        return (int) rmax + ((NUMFINTBINS * 3) + (NUMLOCPOWAVG >> 1) + DELTAAVGBINS);
+    } else {
+        return (int) rmax + NUMFINTBINS;
+    }
 }
 
 
