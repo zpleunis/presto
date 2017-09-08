@@ -13,6 +13,7 @@ typedef struct SIGPROCFB {
   double za_start;       /* Starting zenith angle in deg */
   double fch1;           /* Highest channel frequency (MHz) */
   double foff;           /* Channel stepsize (MHz) */
+  double frequency_table[4096]; /* note limited number of channels */
   int machine_id;        /* Instrument ID (see backend_name() */
   int telescope_id;      /* Telescope ID (see telescope_name() */
   int nchans;            /* Number of finterbank channels */

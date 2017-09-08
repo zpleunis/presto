@@ -231,6 +231,7 @@ int read_filterbank_header(sigprocfb * fb, FILE * inputfile)
     char string[80], message[80];
     int itmp, nbytes = 0, totalbytes;
     int expecting_rawdatafile = 0, expecting_source_name = 0;
+    int expecting_frequency_table = 0, channel_index = 0;
     int barycentric, pulsarcentric;
     /* try to read in the first line of the header */
     get_string(inputfile, &nbytes, string);
@@ -253,6 +254,11 @@ int read_filterbank_header(sigprocfb * fb, FILE * inputfile)
             expecting_rawdatafile = 1;
         } else if (strings_equal(string, "source_name")) {
             expecting_source_name = 1;
+        } else if (strings_equal(string, "FREQUENCY_START")) {
+            expecting_frequency_table = 1;
+            channel_index = 0;
+        } else if (strings_equal(string, "FREQUENCY_END")) {
+            expecting_frequency_table = 0;
         } else if (strings_equal(string, "az_start")) {
             chkfread(&(fb->az_start), sizeof(double), 1, inputfile);
             totalbytes += sizeof(double);
@@ -274,6 +280,10 @@ int read_filterbank_header(sigprocfb * fb, FILE * inputfile)
         } else if (strings_equal(string, "fch1")) {
             chkfread(&(fb->fch1), sizeof(double), 1, inputfile);
             totalbytes += sizeof(double);
+        } else if (strings_equal(string, "fchannel")) {
+            fread(&(fb->frequency_table[channel_index++]), sizeof(double), 1, inputfile);
+            totalbytes += sizeof(double);
+            fb->fch1 = fb->foff = 0.0; /* set to 0.0 to signify that a table is in use */
         } else if (strings_equal(string, "foff")) {
             chkfread(&(fb->foff), sizeof(double), 1, inputfile);
             totalbytes += sizeof(double);
@@ -398,12 +408,25 @@ void read_filterbank_files(struct spectra_info *s)
     s->dt = fb.tsamp;
     s->time_per_subint = s->spectra_per_subint * s->dt;
     s->T = s->N * s->dt;
-    s->df = fabs(fb.foff);
+    if (fb.foff == 0.0) {
+        s->df = fb.frequency_table[0] - fb.frequency_table[1];
+    } else {
+        s->df = fabs(fb.foff);
+    }
     if (fb.foff < 0.0 && s->apply_flipband == -1)
         s->apply_flipband = 0;  // we do this automatically
-    s->BW = s->num_channels * s->df;
-    s->lo_freq = fb.fch1 - (s->num_channels - 1) * s->df;
-    s->hi_freq = fb.fch1;
+    if (fb.fch1 == 0.0) {
+        s->lo_freq = fb.frequency_table[0] - (s->num_channels - 1) * s->df;
+        s->hi_freq = fb.frequency_table[0];
+    } else {
+        s->lo_freq = fb.fch1 - (s->num_channels - 1) * s->df;
+        s->hi_freq = fb.fch1;
+    }
+    if (fb.foff == 0.0) {
+        s->BW = s->hi_freq - s->lo_freq;   
+    } else {
+        s->BW = s->num_channels * s->df;
+    }
     s->fctr = s->lo_freq - 0.5 * s->df + 0.5 * s->BW;
     s->azimuth = fb.az_start;
     s->zenith_ang = fb.za_start;
@@ -454,11 +477,20 @@ void read_filterbank_files(struct spectra_info *s)
                     fabs(fb.foff), ii + 1, s->df);
             exit(1);
         }
-        if (s->hi_freq != fb.fch1) {
-            fprintf(stderr,
-                    "Error:  high chan freq %f in file #%d does not match original high chan freq %f!!\n",
-                    fb.fch1, ii + 1, s->hi_freq);
-            exit(1);
+        if (fb.fch1 == 0.0) {
+            if (s->hi_freq != fb.frequency_table[0]) {
+                fprintf(stderr,
+                        "Error:  high chan freq %f in file #%d does not match original high chan freq %f!!\n",
+                        fb.frequency_table[0], ii + 1, s->hi_freq);
+                exit(1);
+            } 
+        } else {    
+            if (s->hi_freq != fb.fch1) {
+                fprintf(stderr,
+                        "Error:  high chan freq %f in file #%d does not match original high chan freq %f!!\n",
+                        fb.fch1, ii + 1, s->hi_freq);
+                exit(1);
+            }
         }
         s->start_MJD[ii] = fb.tstart;
         s->start_spec[ii] =
