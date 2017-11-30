@@ -413,7 +413,7 @@ void read_filterbank_files(struct spectra_info *s)
     } else {
         s->df = fabs(fb.foff);
     }
-    if (fb.foff < 0.0 && s->apply_flipband == -1)
+    if (fb.foff <= 0.0 && s->apply_flipband == -1)
         s->apply_flipband = 0;  // we do this automatically
     if (fb.fch1 == 0.0) {
         s->lo_freq = fb.frequency_table[0] - (s->num_channels - 1) * s->df;
