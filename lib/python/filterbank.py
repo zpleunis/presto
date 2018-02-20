@@ -12,6 +12,8 @@ import os.path
 import numpy as np
 import sigproc
 
+# ZP: added Nov 2, 2017, use `sp` as `spectra` was already in use..
+import spectra as sp
 
 DEBUG = False
 
@@ -137,7 +139,17 @@ def read_header(filename, verbose=False):
         if verbose:
             print "Read param %s (value: %s)" % (paramname, val)
         if paramname not in ["HEADER_START", "HEADER_END"]:
-            header[paramname] = val
+            if paramname == "FREQUENCY_START":
+                header['frequency_table'] = np.array([])
+                # set to 0.0 to signify that a table is in use
+                header['fch1'] = 0.0
+                header['foff'] = 0.0
+            elif paramname == "FREQUENCY_END":
+                pass
+            elif paramname == "fchannel":
+                header['frequency_table'] = np.append(header['frequency_table'], val)
+            else:
+                header[paramname] = val
     header_size = filfile.tell()
     filfile.close()
     return header, header_size
@@ -150,7 +162,10 @@ class FilterbankFile(object):
         if not os.path.isfile(filfn):
             raise ValueError("ERROR: File does not exist!\n\t(%s)" % filfn)
         self.header, self.header_size = read_header(self.filename)
-        self.frequencies = self.fch1 + self.foff*np.arange(self.nchans)
+        if hasattr(self, 'frequency_table'):
+            self.frequencies = self.frequency_table
+        else:
+            self.frequencies = self.fch1 + self.foff*np.arange(self.nchans)
         self.is_hifreq_first = (self.foff < 0)
         self.bytes_per_spectrum = self.nchans*self.nbits / 8
         data_size = os.path.getsize(self.filename)-self.header_size
@@ -205,6 +220,21 @@ class FilterbankFile(object):
                               count=num_to_read)
         spectra.shape = nspec, self.nchans
         return spectra
+
+    def get_spectra_raw(self, start, stop):
+        stop = min(stop, self.nspec)
+        pos = self.header_size+start*self.bytes_per_spectrum
+        # Compute number of elements to read
+        nspec = int(stop) - int(start)
+        num_to_read = nspec*self.nchans
+        num_to_read = max(0, num_to_read)
+        self.filfile.seek(pos, os.SEEK_SET)
+        spectra = np.fromfile(self.filfile, dtype=self.dtype,
+                              count=num_to_read)
+        spectra.shape = nspec, self.nchans
+        spectra = np.transpose(spectra)
+        return sp.Spectra(self.frequencies, self.tsamp, spectra,
+                          starttime=self.tsamp*start, dm=0)
 
     def append_spectra(self, spectra):
         """Append spectra to the file if is not read-only.
@@ -291,6 +321,7 @@ class FilterbankFile(object):
 def main():
     fil = FilterbankFile(sys.argv[1])
     fil.print_header()
+    print fil.nspec
 
 
 if __name__ == '__main__':
