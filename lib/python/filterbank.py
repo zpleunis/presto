@@ -249,6 +249,21 @@ class FilterbankFile(object):
         return sp.Spectra(self.frequencies, self.tsamp, spectra,
                           starttime=self.tsamp*start, dm=0)
 
+    def get_spectra_raw(self, start, stop):
+        stop = min(stop, self.nspec)
+        pos = self.header_size+start*self.bytes_per_spectrum
+        # Compute number of elements to read
+        nspec = int(stop) - int(start)
+        num_to_read = nspec*self.nchans
+        num_to_read = max(0, num_to_read)
+        self.filfile.seek(pos, os.SEEK_SET)
+        spectra = np.fromfile(self.filfile, dtype=self.dtype,
+                              count=num_to_read)
+        spectra.shape = nspec, self.nchans
+        spectra = np.transpose(spectra)
+        return sp.Spectra(self.frequencies, self.tsamp, spectra,
+                          starttime=self.tsamp*start, dm=0)
+
     def append_spectra(self, spectra):
         """Append spectra to the file if is not read-only.
 
