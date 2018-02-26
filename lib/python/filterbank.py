@@ -156,7 +156,7 @@ class FilterbankFile(object):
         self.bytes_per_spectrum = self.nchans*self.nbits / 8
         data_size = os.path.getsize(self.filename)-self.header_size
         self.nspec = data_size/self.bytes_per_spectrum
-       
+
         # Check if this file is a folded-filterbank file
         if 'npuls' in self.header and 'period' in self.header and \
                 'nbins' in self.header and 'tsamp' not in self.header:
@@ -212,16 +212,16 @@ class FilterbankFile(object):
         num_to_read = nspec*self.nchans
         num_to_read = max(0, num_to_read)
         self.filfile.seek(pos, os.SEEK_SET)
-        spectra_dat = np.fromfile(self.filfile, dtype=self.dtype, 
+        spectra_dat = np.fromfile(self.filfile, dtype=self.dtype,
                               count=num_to_read)
-        spectra_dat.shape = nspec, self.nchans 
+        spectra_dat.shape = nspec, self.nchans
         spec = spectra.Spectra(self.freqs, self.tsamp, spectra_dat.T,
                 starttime=start*self.tsamp, dm=0.0)
         return spec
 
     def append_spectra(self, spectra):
         """Append spectra to the file if is not read-only.
-            
+
             Input:
                 spectra: The spectra to append. The new spectra
                     must have the correct number of channels (ie
@@ -250,7 +250,7 @@ class FilterbankFile(object):
 
     def write_spectra(self, spectra, ispec):
         """Write spectra to the file if is writable.
-            
+
             Input:
                 spectra: The spectra to append. The new spectra
                     must have the correct number of channels (ie
